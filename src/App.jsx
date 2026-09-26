@@ -12,7 +12,9 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [authMode, setAuthMode] = useState('login')
 
-  const [products, setProducts] = useState([
+  const [products, setProducts] = useState(() => {
+    const savedProducts = localStorage.getItem('stocksenseProducts')
+    return savedProducts ? JSON.parse(savedProducts) : [
     {
       id: 1,
       name: 'Steel Rod',
@@ -65,47 +67,34 @@ function App() {
         'Store Room': 0,
       },
     },
-  ])
-
-  const [history, setHistory] = useState(() => {
-    const savedHistory = localStorage.getItem(
-      'stocksenseHistory'
-    )
-
-    return savedHistory
-      ? JSON.parse(savedHistory)
-      : []
+  ]
   })
 
   useEffect(() => {
-    localStorage.setItem(
-      'stocksenseHistory',
-      JSON.stringify(history)
-    )
+    localStorage.setItem('stocksenseProducts', JSON.stringify(products))
+  }, [products])
+
+  const [history, setHistory] = useState(() => {
+    const savedHistory = localStorage.getItem('stocksenseHistory')
+    return savedHistory ? JSON.parse(savedHistory) : []
+  })
+
+  useEffect(() => {
+    localStorage.setItem('stocksenseHistory', JSON.stringify(history))
   }, [history])
 
   function getTotalStock(product) {
-    return Object.values(
-      product.stockByLocation
-    ).reduce(
+    return Object.values(product.stockByLocation).reduce(
       (total, stock) => total + stock,
       0
     )
   }
 
   function isLowStock(product) {
-    return (
-      getTotalStock(product) <=
-      product.reorderLevel
-    )
+    return getTotalStock(product) <= product.reorderLevel
   }
 
-  function addHistory(
-    type,
-    product,
-    quantity,
-    details = ''
-  ) {
+  function addHistory(type, product, quantity, details = '') {
     const movement = {
       id: Date.now() + Math.random(),
       date: new Date().toLocaleString(),
@@ -121,11 +110,7 @@ function App() {
     ])
   }
 
-  function updateStock(
-    productId,
-    location,
-    quantityChange
-  ) {
+  function updateStock(productId, location, quantityChange) {
     setProducts((oldProducts) =>
       oldProducts.map((product) => {
         if (product.id !== productId) {
@@ -137,8 +122,8 @@ function App() {
           stockByLocation: {
             ...product.stockByLocation,
             [location]:
-              (product.stockByLocation[location] ||
-                0) + quantityChange,
+              (product.stockByLocation[location] || 0) +
+              quantityChange,
           },
         }
       })
@@ -158,9 +143,7 @@ function App() {
         }
 
         const currentFromStock =
-          product.stockByLocation[
-            fromLocation
-          ] || 0
+          product.stockByLocation[fromLocation] || 0
 
         return {
           ...product,
@@ -169,9 +152,8 @@ function App() {
             [fromLocation]:
               currentFromStock - quantity,
             [toLocation]:
-              (product.stockByLocation[
-                toLocation
-              ] || 0) + quantity,
+              (product.stockByLocation[toLocation] || 0) +
+              quantity,
           },
         }
       })
@@ -233,35 +215,19 @@ function App() {
         </div>
 
         <nav>
-          <button
-            onClick={() =>
-              setPage('dashboard')
-            }
-          >
+          <button onClick={() => setPage('dashboard')}>
             Dashboard
           </button>
 
-          <button
-            onClick={() =>
-              setPage('products')
-            }
-          >
+          <button onClick={() => setPage('products')}>
             Products
           </button>
 
-          <button
-            onClick={() =>
-              setPage('operations')
-            }
-          >
+          <button onClick={() => setPage('operations')}>
             Operations
           </button>
 
-          <button
-            onClick={() =>
-              setPage('history')
-            }
-          >
+          <button onClick={() => setPage('history')}>
             History
           </button>
         </nav>
@@ -300,27 +266,22 @@ function App() {
             </h1>
 
             <p className="description">
-              StockSense helps businesses manage
-              products, stock, receipts, deliveries,
-              transfers and inventory history from one
-              simple platform.
+              StockSense helps businesses manage products,
+              stock, receipts, deliveries, transfers and
+              inventory history from one simple platform.
             </p>
 
             <div className="buttons">
               <button
                 className="primary-btn"
-                onClick={() =>
-                  setPage('dashboard')
-                }
+                onClick={() => setPage('dashboard')}
               >
                 Get Started
               </button>
 
               <button
                 className="secondary-btn"
-                onClick={() =>
-                  setPage('dashboard')
-                }
+                onClick={() => setPage('dashboard')}
               >
                 View Dashboard
               </button>
@@ -386,9 +347,7 @@ function AuthPage({
     setMessage('')
 
     if (!email || !password) {
-      setMessage(
-        'Please enter email and password.'
-      )
+      setMessage('Please enter email and password.')
       return
     }
 
@@ -406,9 +365,7 @@ function AuthPage({
       }
 
       if (password !== confirmPassword) {
-        setMessage(
-          'Passwords do not match.'
-        )
+        setMessage('Passwords do not match.')
         return
       }
 
@@ -502,9 +459,7 @@ function AuthPage({
 
           {mode === 'signup' && (
             <>
-              <label>
-                Confirm Password
-              </label>
+              <label>Confirm Password</label>
 
               <input
                 type="password"
@@ -635,8 +590,7 @@ function Dashboard({
           <h1>Dashboard</h1>
 
           <p>
-            Welcome to your StockSense inventory
-            overview.
+            Welcome to your StockSense inventory overview.
           </p>
         </div>
       </div>
@@ -645,16 +599,12 @@ function Dashboard({
         <div className="big-stat">
           <p>Total Products</p>
           <h2>{products.length}</h2>
-          <span>
-            Products in inventory
-          </span>
+          <span>Products in inventory</span>
         </div>
 
         <div className="big-stat">
           <p>Low Stock</p>
-          <h2>
-            {lowStockProducts.length}
-          </h2>
+          <h2>{lowStockProducts.length}</h2>
           <span>Need attention</span>
         </div>
 
@@ -667,9 +617,7 @@ function Dashboard({
         <div className="big-stat">
           <p>Locations</p>
           <h2>{LOCATIONS.length}</h2>
-          <span>
-            Storage locations
-          </span>
+          <span>Storage locations</span>
         </div>
       </div>
 
@@ -691,16 +639,14 @@ function Dashboard({
               <span>{product.name}</span>
 
               <span>
-                {LOCATIONS.map(
-                  (location) => (
-                    <div key={location}>
-                      {location}:{' '}
-                      {product.stockByLocation[
-                        location
-                      ] || 0}
-                    </div>
-                  )
-                )}
+                {LOCATIONS.map((location) => (
+                  <div key={location}>
+                    {location}:{' '}
+                    {product.stockByLocation[
+                      location
+                    ] || 0}
+                  </div>
+                ))}
               </span>
 
               <span
@@ -720,30 +666,22 @@ function Dashboard({
           <h2>Low Stock Alert</h2>
 
           {lowStockProducts.length === 0 ? (
-            <p>
-              No low stock products.
-            </p>
+            <p>No low stock products.</p>
           ) : (
-            lowStockProducts.map(
-              (product) => (
-                <div
-                  className="alert-item"
-                  key={product.id}
-                >
-                  <strong>
-                    {product.name}
-                  </strong>
+            lowStockProducts.map((product) => (
+              <div
+                className="alert-item"
+                key={product.id}
+              >
+                <strong>{product.name}</strong>
 
-                  <span>
-                    {getTotalStock(product)}{' '}
-                    units left
-                    <br />
-                    Reorder at:{' '}
-                    {product.reorderLevel}
-                  </span>
-                </div>
-              )
-            )
+                <span>
+                  {getTotalStock(product)} units left
+                  <br />
+                  Reorder at: {product.reorderLevel}
+                </span>
+              </div>
+            ))
           )}
         </div>
       </div>
@@ -800,9 +738,7 @@ function Products({
       reorderLevel === '' ||
       reorderQuantity === ''
     ) {
-      alert(
-        'Please fill all fields'
-      )
+      alert('Please fill all fields')
       return
     }
 
@@ -810,56 +746,45 @@ function Products({
       name,
       sku,
       category,
-      reorderLevel: Number(
-        reorderLevel
-      ),
-      reorderQuantity: Number(
-        reorderQuantity
-      ),
+      reorderLevel: Number(reorderLevel),
+      reorderQuantity: Number(reorderQuantity),
     }
 
     if (editingId !== null) {
-      setProducts(
-        (oldProducts) =>
-          oldProducts.map(
-            (product) =>
-              product.id === editingId
-                ? {
-                    ...product,
-                    ...productData,
-                  }
-                : product
-          )
+      setProducts((oldProducts) =>
+        oldProducts.map((product) =>
+          product.id === editingId
+            ? {
+                ...product,
+                ...productData,
+              }
+            : product
+        )
       )
     } else {
-      setProducts(
-        (oldProducts) => [
-          ...oldProducts,
-          {
-            id: Date.now(),
-            ...productData,
-            stockByLocation: {
-              'Warehouse A':
-                location ===
-                'Warehouse A'
-                  ? Number(stock)
-                  : 0,
+      setProducts((oldProducts) => [
+        ...oldProducts,
+        {
+          id: Date.now(),
+          ...productData,
+          stockByLocation: {
+            'Warehouse A':
+              location === 'Warehouse A'
+                ? Number(stock)
+                : 0,
 
-              'Warehouse B':
-                location ===
-                'Warehouse B'
-                  ? Number(stock)
-                  : 0,
+            'Warehouse B':
+              location === 'Warehouse B'
+                ? Number(stock)
+                : 0,
 
-              'Store Room':
-                location ===
-                'Store Room'
-                  ? Number(stock)
-                  : 0,
-            },
+            'Store Room':
+              location === 'Store Room'
+                ? Number(stock)
+                : 0,
           },
-        ]
-      )
+        },
+      ])
     }
 
     clearForm()
@@ -873,9 +798,7 @@ function Products({
     const currentLocation =
       LOCATIONS.find(
         (item) =>
-          (product.stockByLocation[
-            item
-          ] || 0) > 0
+          (product.stockByLocation[item] || 0) > 0
       ) || 'Warehouse A'
 
     setName(product.name)
@@ -894,21 +817,18 @@ function Products({
   }
 
   function deleteProduct(id) {
-    const confirmed =
-      window.confirm(
-        'Are you sure you want to delete this product?'
-      )
+    const confirmed = window.confirm(
+      'Are you sure you want to delete this product?'
+    )
 
     if (!confirmed) {
       return
     }
 
-    setProducts(
-      (oldProducts) =>
-        oldProducts.filter(
-          (product) =>
-            product.id !== id
-        )
+    setProducts((oldProducts) =>
+      oldProducts.filter(
+        (product) => product.id !== id
+      )
     )
   }
 
@@ -926,10 +846,8 @@ function Products({
           .includes(searchText)
 
       const matchesCategory =
-        filterCategory ===
-          'All Categories' ||
-        product.category ===
-          filterCategory
+        filterCategory === 'All Categories' ||
+        product.category === filterCategory
 
       return (
         matchesSearch &&
@@ -998,9 +916,7 @@ function Products({
             <select
               value={category}
               onChange={(e) =>
-                setCategory(
-                  e.target.value
-                )
+                setCategory(e.target.value)
               }
             >
               <option value="">
@@ -1026,27 +942,21 @@ function Products({
               placeholder="Initial Stock"
               value={stock}
               onChange={(e) =>
-                setStock(
-                  e.target.value
-                )
+                setStock(e.target.value)
               }
             />
 
             <select
               value={location}
               onChange={(e) =>
-                setLocation(
-                  e.target.value
-                )
+                setLocation(e.target.value)
               }
             >
-              {LOCATIONS.map(
-                (item) => (
-                  <option key={item}>
-                    {item}
-                  </option>
-                )
-              )}
+              {LOCATIONS.map((item) => (
+                <option key={item}>
+                  {item}
+                </option>
+              ))}
             </select>
 
             <input
@@ -1091,9 +1001,7 @@ function Products({
           placeholder="Search by product name or SKU..."
           value={search}
           onChange={(e) =>
-            setSearch(
-              e.target.value
-            )
+            setSearch(e.target.value)
           }
         />
 
@@ -1105,18 +1013,10 @@ function Products({
             )
           }
         >
-          <option>
-            All Categories
-          </option>
-          <option>
-            Raw Material
-          </option>
-          <option>
-            Office Supplies
-          </option>
-          <option>
-            Furniture
-          </option>
+          <option>All Categories</option>
+          <option>Raw Material</option>
+          <option>Office Supplies</option>
+          <option>Furniture</option>
         </select>
       </div>
 
@@ -1125,14 +1025,11 @@ function Products({
           <span>Product</span>
           <span>SKU</span>
           <span>Stock</span>
-          <span>
-            Reorder Level
-          </span>
+          <span>Reorder Level</span>
           <span>Status</span>
         </div>
 
-        {filteredProducts.length ===
-        0 ? (
+        {filteredProducts.length === 0 ? (
           <div className="no-products">
             No products found.
           </div>
@@ -1143,18 +1040,12 @@ function Products({
                 className="product-row"
                 key={product.id}
               >
-                <span>
-                  {product.name}
-                </span>
+                <span>{product.name}</span>
+
+                <span>{product.sku}</span>
 
                 <span>
-                  {product.sku}
-                </span>
-
-                <span>
-                  {getTotalStock(
-                    product
-                  )}
+                  {getTotalStock(product)}
                 </span>
 
                 <span>
@@ -1163,16 +1054,12 @@ function Products({
 
                 <span
                   className={
-                    isLowStock(
-                      product
-                    )
+                    isLowStock(product)
                       ? 'status-low'
                       : 'status-ok'
                   }
                 >
-                  {isLowStock(
-                    product
-                  )
+                  {isLowStock(product)
                     ? 'Reorder Required'
                     : 'Stock OK'}
                 </span>
@@ -1186,9 +1073,7 @@ function Products({
         <div className="product-row product-head">
           <span>Product</span>
           <span>Category</span>
-          <span>
-            Reorder Qty
-          </span>
+          <span>Reorder Qty</span>
           <span>Actions</span>
         </div>
 
@@ -1198,13 +1083,9 @@ function Products({
               className="product-row"
               key={`action-${product.id}`}
             >
-              <span>
-                {product.name}
-              </span>
+              <span>{product.name}</span>
 
-              <span>
-                {product.category}
-              </span>
+              <span>{product.category}</span>
 
               <span>
                 {product.reorderQuantity}
@@ -1214,9 +1095,7 @@ function Products({
                 <button
                   className="edit-btn"
                   onClick={() =>
-                    editProduct(
-                      product
-                    )
+                    editProduct(product)
                   }
                 >
                   Edit
@@ -1258,23 +1137,17 @@ function Operations({
   const [quantity, setQuantity] =
     useState('')
 
-  const [
-    adjustmentStock,
-    setAdjustmentStock,
-  ] = useState('')
+  const [adjustmentStock, setAdjustmentStock] =
+    useState('')
 
   const [location, setLocation] =
     useState('')
 
-  const [
-    fromLocation,
-    setFromLocation,
-  ] = useState('')
+  const [fromLocation, setFromLocation] =
+    useState('')
 
-  const [
-    toLocation,
-    setToLocation,
-  ] = useState('')
+  const [toLocation, setToLocation] =
+    useState('')
 
   const [message, setMessage] =
     useState('')
@@ -1294,8 +1167,7 @@ function Operations({
     const selectedProduct =
       products.find(
         (product) =>
-          product.id ===
-          Number(productId)
+          product.id === Number(productId)
       )
 
     if (!selectedProduct) {
@@ -1311,9 +1183,7 @@ function Operations({
 
       if (
         adjustmentStock === '' ||
-        Number.isNaN(
-          physicalStock
-        ) ||
+        Number.isNaN(physicalStock) ||
         physicalStock < 0
       ) {
         setMessage(
@@ -1330,14 +1200,12 @@ function Operations({
       }
 
       const oldStock =
-        selectedProduct
-          .stockByLocation[
+        selectedProduct.stockByLocation[
           location
         ] || 0
 
       const difference =
-        physicalStock -
-        oldStock
+        physicalStock - oldStock
 
       adjustStock(
         selectedProduct.id,
@@ -1348,9 +1216,7 @@ function Operations({
       addHistory(
         'Adjustment',
         selectedProduct.name,
-        Math.abs(
-          difference
-        ),
+        Math.abs(difference),
         `${location}: ${oldStock} → ${physicalStock}`
       )
 
@@ -1362,8 +1228,7 @@ function Operations({
       return
     }
 
-    const amount =
-      Number(quantity)
+    const amount = Number(quantity)
 
     if (!amount || amount <= 0) {
       setMessage(
@@ -1399,8 +1264,7 @@ function Operations({
       )
 
       const oldStock =
-        selectedProduct
-          .stockByLocation[
+        selectedProduct.stockByLocation[
           location
         ] || 0
 
@@ -1414,15 +1278,11 @@ function Operations({
 
     if (operation === 'delivery') {
       const availableStock =
-        selectedProduct
-          .stockByLocation[
+        selectedProduct.stockByLocation[
           location
         ] || 0
 
-      if (
-        amount >
-        availableStock
-      ) {
+      if (amount > availableStock) {
         setMessage(
           `Not enough stock at ${location}. Available stock: ${availableStock}`
         )
@@ -1462,8 +1322,7 @@ function Operations({
       }
 
       if (
-        fromLocation ===
-        toLocation
+        fromLocation === toLocation
       ) {
         setMessage(
           'From and To locations must be different.'
@@ -1472,15 +1331,11 @@ function Operations({
       }
 
       const availableStock =
-        selectedProduct
-          .stockByLocation[
+        selectedProduct.stockByLocation[
           fromLocation
         ] || 0
 
-      if (
-        amount >
-        availableStock
-      ) {
+      if (amount > availableStock) {
         setMessage(
           `Not enough stock at ${fromLocation}. Available stock: ${availableStock}`
         )
@@ -1512,8 +1367,7 @@ function Operations({
   const selectedProduct =
     products.find(
       (product) =>
-        product.id ===
-        Number(productId)
+        product.id === Number(productId)
     )
 
   return (
@@ -1541,9 +1395,7 @@ function Operations({
               : 'operation-tab'
           }
           onClick={() => {
-            setOperation(
-              'receipt'
-            )
+            setOperation('receipt')
             setMessage('')
             resetForm()
           }}
@@ -1558,9 +1410,7 @@ function Operations({
               : 'operation-tab'
           }
           onClick={() => {
-            setOperation(
-              'delivery'
-            )
+            setOperation('delivery')
             setMessage('')
             resetForm()
           }}
@@ -1575,9 +1425,7 @@ function Operations({
               : 'operation-tab'
           }
           onClick={() => {
-            setOperation(
-              'transfer'
-            )
+            setOperation('transfer')
             setMessage('')
             resetForm()
           }}
@@ -1587,15 +1435,12 @@ function Operations({
 
         <button
           className={
-            operation ===
-            'adjustment'
+            operation === 'adjustment'
               ? 'operation-tab active'
               : 'operation-tab'
           }
           onClick={() => {
-            setOperation(
-              'adjustment'
-            )
+            setOperation('adjustment')
             setMessage('')
             resetForm()
           }}
@@ -1606,27 +1451,21 @@ function Operations({
 
       <div className="operation-card">
         <h2>
-          {operation ===
-            'receipt' &&
+          {operation === 'receipt' &&
             'Add Incoming Stock'}
 
-          {operation ===
-            'delivery' &&
+          {operation === 'delivery' &&
             'Record Outgoing Stock'}
 
-          {operation ===
-            'transfer' &&
+          {operation === 'transfer' &&
             'Transfer Stock'}
 
-          {operation ===
-            'adjustment' &&
+          {operation === 'adjustment' &&
             'Adjust Physical Stock'}
         </h2>
 
         <div className="operation-form">
-          <label>
-            Product
-          </label>
+          <label>Product</label>
 
           <select
             value={productId}
@@ -1640,28 +1479,19 @@ function Operations({
               Select Product
             </option>
 
-            {products.map(
-              (item) => (
-                <option
-                  key={item.id}
-                  value={item.id}
-                >
-                  {item.name} —{' '}
-                  {getTotalStock(
-                    item
-                  )}{' '}
-                  total units
-                </option>
-              )
-            )}
+            {products.map((item) => (
+              <option
+                key={item.id}
+                value={item.id}
+              >
+                {item.name} — {getTotalStock(item)} total units
+              </option>
+            ))}
           </select>
 
-          {operation ===
-          'adjustment' ? (
+          {operation === 'adjustment' ? (
             <>
-              <label>
-                Location
-              </label>
+              <label>Location</label>
 
               <select
                 value={location}
@@ -1675,24 +1505,18 @@ function Operations({
                   Select location
                 </option>
 
-                {LOCATIONS.map(
-                  (item) => (
-                    <option
-                      key={item}
-                    >
-                      {item}
-                    </option>
-                  )
-                )}
+                {LOCATIONS.map((item) => (
+                  <option key={item}>
+                    {item}
+                  </option>
+                ))}
               </select>
 
               {selectedProduct &&
                 location && (
                   <div className="operation-message">
-                    Current stock at{' '}
-                    {location}:{' '}
-                    {selectedProduct
-                      .stockByLocation[
+                    Current stock at {location}:{' '}
+                    {selectedProduct.stockByLocation[
                       location
                     ] || 0}
                   </div>
@@ -1706,9 +1530,7 @@ function Operations({
                 type="number"
                 min="0"
                 placeholder="Enter actual physical stock"
-                value={
-                  adjustmentStock
-                }
+                value={adjustmentStock}
                 onChange={(e) =>
                   setAdjustmentStock(
                     e.target.value
@@ -1718,9 +1540,7 @@ function Operations({
             </>
           ) : (
             <>
-              <label>
-                Quantity
-              </label>
+              <label>Quantity</label>
 
               <input
                 type="number"
@@ -1736,16 +1556,10 @@ function Operations({
             </>
           )}
 
-          {(
-            operation ===
-              'receipt' ||
-            operation ===
-              'delivery'
-          ) && (
+          {(operation === 'receipt' ||
+            operation === 'delivery') && (
             <>
-              <label>
-                Location
-              </label>
+              <label>Location</label>
 
               <select
                 value={location}
@@ -1759,24 +1573,18 @@ function Operations({
                   Select location
                 </option>
 
-                {LOCATIONS.map(
-                  (item) => (
-                    <option
-                      key={item}
-                    >
-                      {item}
-                    </option>
-                  )
-                )}
+                {LOCATIONS.map((item) => (
+                  <option key={item}>
+                    {item}
+                  </option>
+                ))}
               </select>
 
               {selectedProduct &&
                 location && (
                   <div className="operation-message">
-                    Available at{' '}
-                    {location}:{' '}
-                    {selectedProduct
-                      .stockByLocation[
+                    Available at {location}:{' '}
+                    {selectedProduct.stockByLocation[
                       location
                     ] || 0}{' '}
                     units
@@ -1785,12 +1593,9 @@ function Operations({
             </>
           )}
 
-          {operation ===
-            'transfer' && (
+          {operation === 'transfer' && (
             <>
-              <label>
-                From Location
-              </label>
+              <label>From Location</label>
 
               <select
                 value={fromLocation}
@@ -1804,33 +1609,25 @@ function Operations({
                   Select location
                 </option>
 
-                {LOCATIONS.map(
-                  (item) => (
-                    <option
-                      key={item}
-                    >
-                      {item}
-                    </option>
-                  )
-                )}
+                {LOCATIONS.map((item) => (
+                  <option key={item}>
+                    {item}
+                  </option>
+                ))}
               </select>
 
               {selectedProduct &&
                 fromLocation && (
                   <div className="operation-message">
-                    Available at{' '}
-                    {fromLocation}:{' '}
-                    {selectedProduct
-                      .stockByLocation[
+                    Available at {fromLocation}:{' '}
+                    {selectedProduct.stockByLocation[
                       fromLocation
                     ] || 0}{' '}
                     units
                   </div>
                 )}
 
-              <label>
-                To Location
-              </label>
+              <label>To Location</label>
 
               <select
                 value={toLocation}
@@ -1844,39 +1641,29 @@ function Operations({
                   Select location
                 </option>
 
-                {LOCATIONS.map(
-                  (item) => (
-                    <option
-                      key={item}
-                    >
-                      {item}
-                    </option>
-                  )
-                )}
+                {LOCATIONS.map((item) => (
+                  <option key={item}>
+                    {item}
+                  </option>
+                ))}
               </select>
             </>
           )}
 
           <button
             className="primary-btn operation-submit"
-            onClick={
-              handleOperation
-            }
+            onClick={handleOperation}
           >
-            {operation ===
-              'receipt' &&
+            {operation === 'receipt' &&
               'Record Receipt'}
 
-            {operation ===
-              'delivery' &&
+            {operation === 'delivery' &&
               'Record Delivery'}
 
-            {operation ===
-              'transfer' &&
+            {operation === 'transfer' &&
               'Transfer Stock'}
 
-            {operation ===
-              'adjustment' &&
+            {operation === 'adjustment' &&
               'Adjust Stock'}
           </button>
 
@@ -1899,13 +1686,10 @@ function History({ history }) {
           INVENTORY MANAGEMENT
         </p>
 
-        <h1>
-          Stock History
-        </h1>
+        <h1>Stock History</h1>
 
         <p>
-          Complete record of inventory
-          movements.
+          Complete record of inventory movements.
         </p>
       </div>
 
@@ -1923,34 +1707,18 @@ function History({ history }) {
             No stock movements yet.
           </div>
         ) : (
-          history.map(
-            (item) => (
-              <div
-                className="history-row"
-                key={item.id}
-              >
-                <span>
-                  {item.date}
-                </span>
-
-                <span>
-                  {item.product}
-                </span>
-
-                <span>
-                  {item.type}
-                </span>
-
-                <span>
-                  {item.quantity}
-                </span>
-
-                <span>
-                  {item.details}
-                </span>
-              </div>
-            )
-          )
+          history.map((item) => (
+            <div
+              className="history-row"
+              key={item.id}
+            >
+              <span>{item.date}</span>
+              <span>{item.product}</span>
+              <span>{item.type}</span>
+              <span>{item.quantity}</span>
+              <span>{item.details}</span>
+            </div>
+          ))
         )}
       </div>
     </main>
