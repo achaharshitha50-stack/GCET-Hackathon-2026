@@ -1128,29 +1128,14 @@ function Operations({
   adjustStock,
   addHistory,
 }) {
-  const [operation, setOperation] =
-    useState('receipt')
-
-  const [productId, setProductId] =
-    useState('')
-
-  const [quantity, setQuantity] =
-    useState('')
-
-  const [adjustmentStock, setAdjustmentStock] =
-    useState('')
-
-  const [location, setLocation] =
-    useState('')
-
-  const [fromLocation, setFromLocation] =
-    useState('')
-
-  const [toLocation, setToLocation] =
-    useState('')
-
-  const [message, setMessage] =
-    useState('')
+  const [operation, setOperation] = useState('receipt')
+  const [productId, setProductId] = useState('')
+  const [quantity, setQuantity] = useState('')
+  const [adjustmentStock, setAdjustmentStock] = useState('')
+  const [location, setLocation] = useState('')
+  const [fromLocation, setFromLocation] = useState('')
+  const [toLocation, setToLocation] = useState('')
+  const [message, setMessage] = useState('')
 
   function resetForm() {
     setProductId('')
@@ -1161,57 +1146,45 @@ function Operations({
     setToLocation('')
   }
 
+  function handleTabChange(nextOperation) {
+    setOperation(nextOperation)
+    setMessage('')
+    resetForm()
+  }
+
   function handleOperation() {
     setMessage('')
 
-    const selectedProduct =
-      products.find(
-        (product) =>
-          product.id === Number(productId)
-      )
+    const selectedProduct = products.find(
+      (product) => product.id === Number(productId)
+    )
 
     if (!selectedProduct) {
-      setMessage(
-        'Please select a product.'
-      )
+      setMessage('Please select a product.')
       return
     }
 
     if (operation === 'adjustment') {
-      const physicalStock =
-        Number(adjustmentStock)
+      const physicalStock = Number(adjustmentStock)
 
       if (
         adjustmentStock === '' ||
         Number.isNaN(physicalStock) ||
         physicalStock < 0
       ) {
-        setMessage(
-          'Please enter a valid physical stock count.'
-        )
+        setMessage('Please enter a valid physical stock count.')
         return
       }
 
       if (!location) {
-        setMessage(
-          'Please select a location.'
-        )
+        setMessage('Please select a location.')
         return
       }
 
-      const oldStock =
-        selectedProduct.stockByLocation[
-          location
-        ] || 0
+      const oldStock = selectedProduct.stockByLocation[location] || 0
+      const difference = physicalStock - oldStock
 
-      const difference =
-        physicalStock - oldStock
-
-      adjustStock(
-        selectedProduct.id,
-        location,
-        physicalStock
-      )
+      adjustStock(selectedProduct.id, location, physicalStock)
 
       addHistory(
         'Adjustment',
@@ -1221,7 +1194,9 @@ function Operations({
       )
 
       setMessage(
-        `Stock adjusted successfully. ${location} stock is now ${physicalStock}.`
+        difference === 0
+          ? `No change required. ${location} already has ${physicalStock} units.`
+          : `Stock adjusted successfully. ${location} changed by ${difference > 0 ? '+' : ''}${difference} units.`
       )
 
       resetForm()
@@ -1230,31 +1205,27 @@ function Operations({
 
     const amount = Number(quantity)
 
-    if (!amount || amount <= 0) {
-      setMessage(
-        'Please enter a quantity greater than 0.'
-      )
+    if (
+      quantity === '' ||
+      Number.isNaN(amount) ||
+      amount <= 0
+    ) {
+      setMessage('Please enter a quantity greater than 0.')
       return
     }
 
-    if (
-      operation === 'receipt' ||
-      operation === 'delivery'
-    ) {
+    if (operation === 'receipt' || operation === 'delivery') {
       if (!location) {
-        setMessage(
-          'Please select a location.'
-        )
+        setMessage('Please select a location.')
         return
       }
     }
 
     if (operation === 'receipt') {
-      updateStock(
-        selectedProduct.id,
-        location,
-        amount
-      )
+      const oldStock = selectedProduct.stockByLocation[location] || 0
+      const newStock = oldStock + amount
+
+      updateStock(selectedProduct.id, location, amount)
 
       addHistory(
         'Receipt',
@@ -1263,13 +1234,8 @@ function Operations({
         `Incoming stock → ${location}`
       )
 
-      const oldStock =
-        selectedProduct.stockByLocation[
-          location
-        ] || 0
-
       setMessage(
-        `${amount} units received at ${location}. New stock: ${oldStock + amount}`
+        `${amount} units received at ${location}. Stock changed from ${oldStock} to ${newStock}.`
       )
 
       resetForm()
@@ -1277,23 +1243,18 @@ function Operations({
     }
 
     if (operation === 'delivery') {
-      const availableStock =
-        selectedProduct.stockByLocation[
-          location
-        ] || 0
+      const availableStock = selectedProduct.stockByLocation[location] || 0
 
       if (amount > availableStock) {
         setMessage(
-          `Not enough stock at ${location}. Available stock: ${availableStock}`
+          `Delivery blocked. Only ${availableStock} units are available at ${location}.`
         )
         return
       }
 
-      updateStock(
-        selectedProduct.id,
-        location,
-        -amount
-      )
+      const remainingStock = availableStock - amount
+
+      updateStock(selectedProduct.id, location, -amount)
 
       addHistory(
         'Delivery',
@@ -1303,7 +1264,7 @@ function Operations({
       )
 
       setMessage(
-        `${amount} units delivered from ${location}. New stock: ${availableStock - amount}`
+        `${amount} units delivered from ${location}. Remaining stock: ${remainingStock}.`
       )
 
       resetForm()
@@ -1311,36 +1272,35 @@ function Operations({
     }
 
     if (operation === 'transfer') {
-      if (
-        !fromLocation ||
-        !toLocation
-      ) {
+      if (!fromLocation || !toLocation) {
         setMessage(
-          'Please select both locations.'
+          'Please select both source and destination locations.'
         )
         return
       }
 
-      if (
-        fromLocation === toLocation
-      ) {
+      if (fromLocation === toLocation) {
         setMessage(
-          'From and To locations must be different.'
+          'Source and destination locations must be different.'
         )
         return
       }
 
       const availableStock =
-        selectedProduct.stockByLocation[
-          fromLocation
-        ] || 0
+        selectedProduct.stockByLocation[fromLocation] || 0
 
       if (amount > availableStock) {
         setMessage(
-          `Not enough stock at ${fromLocation}. Available stock: ${availableStock}`
+          `Transfer blocked. Only ${availableStock} units are available at ${fromLocation}.`
         )
         return
       }
+
+      const destinationStock =
+        selectedProduct.stockByLocation[toLocation] || 0
+
+      const remainingSource = availableStock - amount
+      const newDestinationStock = destinationStock + amount
 
       transferStock(
         selectedProduct.id,
@@ -1357,32 +1317,40 @@ function Operations({
       )
 
       setMessage(
-        `${amount} units transferred from ${fromLocation} to ${toLocation}.`
+        `${amount} units transferred successfully. ${fromLocation}: ${remainingSource} units, ${toLocation}: ${newDestinationStock} units.`
       )
 
       resetForm()
     }
   }
 
-  const selectedProduct =
-    products.find(
-      (product) =>
-        product.id === Number(productId)
-    )
+  const selectedProduct = products.find(
+    (product) => product.id === Number(productId)
+  )
+
+  const selectedLocationStock =
+    selectedProduct && location
+      ? selectedProduct.stockByLocation[location] || 0
+      : null
+
+  const transferSourceStock =
+    selectedProduct && fromLocation
+      ? selectedProduct.stockByLocation[fromLocation] || 0
+      : null
+
+  const transferDestinationStock =
+    selectedProduct && toLocation
+      ? selectedProduct.stockByLocation[toLocation] || 0
+      : null
 
   return (
     <main className="operations-page">
       <div className="operations-header">
         <div>
-          <p className="tag">
-            STOCK OPERATIONS
-          </p>
-
+          <p className="tag">STOCK OPERATIONS</p>
           <h1>Operations</h1>
-
           <p>
-            Manage receipts, deliveries,
-            transfers and stock adjustments.
+            Manage receipts, deliveries, transfers and stock adjustments.
           </p>
         </div>
       </div>
@@ -1394,11 +1362,7 @@ function Operations({
               ? 'operation-tab active'
               : 'operation-tab'
           }
-          onClick={() => {
-            setOperation('receipt')
-            setMessage('')
-            resetForm()
-          }}
+          onClick={() => handleTabChange('receipt')}
         >
           Receipt
         </button>
@@ -1409,11 +1373,7 @@ function Operations({
               ? 'operation-tab active'
               : 'operation-tab'
           }
-          onClick={() => {
-            setOperation('delivery')
-            setMessage('')
-            resetForm()
-          }}
+          onClick={() => handleTabChange('delivery')}
         >
           Delivery
         </button>
@@ -1424,11 +1384,7 @@ function Operations({
               ? 'operation-tab active'
               : 'operation-tab'
           }
-          onClick={() => {
-            setOperation('transfer')
-            setMessage('')
-            resetForm()
-          }}
+          onClick={() => handleTabChange('transfer')}
         >
           Internal Transfer
         </button>
@@ -1439,11 +1395,7 @@ function Operations({
               ? 'operation-tab active'
               : 'operation-tab'
           }
-          onClick={() => {
-            setOperation('adjustment')
-            setMessage('')
-            resetForm()
-          }}
+          onClick={() => handleTabChange('adjustment')}
         >
           Stock Adjustment
         </button>
@@ -1451,17 +1403,10 @@ function Operations({
 
       <div className="operation-card">
         <h2>
-          {operation === 'receipt' &&
-            'Add Incoming Stock'}
-
-          {operation === 'delivery' &&
-            'Record Outgoing Stock'}
-
-          {operation === 'transfer' &&
-            'Transfer Stock'}
-
-          {operation === 'adjustment' &&
-            'Adjust Physical Stock'}
+          {operation === 'receipt' && 'Add Incoming Stock'}
+          {operation === 'delivery' && 'Record Outgoing Stock'}
+          {operation === 'transfer' && 'Transfer Stock'}
+          {operation === 'adjustment' && 'Adjust Physical Stock'}
         </h2>
 
         <div className="operation-form">
@@ -1469,25 +1414,25 @@ function Operations({
 
           <select
             value={productId}
-            onChange={(e) =>
-              setProductId(
-                e.target.value
-              )
-            }
+            onChange={(e) => {
+              setProductId(e.target.value)
+              setMessage('')
+            }}
           >
-            <option value="">
-              Select Product
-            </option>
-
+            <option value="">Select Product</option>
             {products.map((item) => (
-              <option
-                key={item.id}
-                value={item.id}
-              >
+              <option key={item.id} value={item.id}>
                 {item.name} — {getTotalStock(item)} total units
               </option>
             ))}
           </select>
+
+          {selectedProduct && (
+            <div className="operation-message">
+              Total stock for <strong>{selectedProduct.name}</strong>:{' '}
+              {getTotalStock(selectedProduct)} units
+            </div>
+          )}
 
           {operation === 'adjustment' ? (
             <>
@@ -1495,47 +1440,31 @@ function Operations({
 
               <select
                 value={location}
-                onChange={(e) =>
-                  setLocation(
-                    e.target.value
-                  )
-                }
+                onChange={(e) => {
+                  setLocation(e.target.value)
+                  setMessage('')
+                }}
               >
-                <option value="">
-                  Select location
-                </option>
-
+                <option value="">Select location</option>
                 {LOCATIONS.map((item) => (
-                  <option key={item}>
-                    {item}
-                  </option>
+                  <option key={item}>{item}</option>
                 ))}
               </select>
 
-              {selectedProduct &&
-                location && (
-                  <div className="operation-message">
-                    Current stock at {location}:{' '}
-                    {selectedProduct.stockByLocation[
-                      location
-                    ] || 0}
-                  </div>
-                )}
+              {selectedProduct && location && (
+                <div className="operation-message">
+                  Current stock at {location}: {selectedLocationStock} units
+                </div>
+              )}
 
-              <label>
-                Physical Stock Count
-              </label>
+              <label>Physical Stock Count</label>
 
               <input
                 type="number"
                 min="0"
                 placeholder="Enter actual physical stock"
                 value={adjustmentStock}
-                onChange={(e) =>
-                  setAdjustmentStock(
-                    e.target.value
-                  )
-                }
+                onChange={(e) => setAdjustmentStock(e.target.value)}
               />
             </>
           ) : (
@@ -1547,47 +1476,52 @@ function Operations({
                 min="1"
                 placeholder="Enter quantity"
                 value={quantity}
-                onChange={(e) =>
-                  setQuantity(
-                    e.target.value
-                  )
-                }
+                onChange={(e) => setQuantity(e.target.value)}
               />
             </>
           )}
 
-          {(operation === 'receipt' ||
-            operation === 'delivery') && (
+          {(operation === 'receipt' || operation === 'delivery') && (
             <>
               <label>Location</label>
 
               <select
                 value={location}
-                onChange={(e) =>
-                  setLocation(
-                    e.target.value
-                  )
-                }
+                onChange={(e) => {
+                  setLocation(e.target.value)
+                  setMessage('')
+                }}
               >
-                <option value="">
-                  Select location
-                </option>
-
+                <option value="">Select location</option>
                 {LOCATIONS.map((item) => (
-                  <option key={item}>
-                    {item}
-                  </option>
+                  <option key={item}>{item}</option>
                 ))}
               </select>
 
+              {selectedProduct && location && (
+                <div className="operation-message">
+                  Available at {location}: {selectedLocationStock} units
+                </div>
+              )}
+
               {selectedProduct &&
-                location && (
+                location &&
+                quantity &&
+                operation === 'delivery' &&
+                Number(quantity) <= selectedLocationStock && (
                   <div className="operation-message">
-                    Available at {location}:{' '}
-                    {selectedProduct.stockByLocation[
-                      location
-                    ] || 0}{' '}
-                    units
+                    Remaining stock after delivery:{' '}
+                    {selectedLocationStock - Number(quantity)} units
+                  </div>
+                )}
+
+              {selectedProduct &&
+                location &&
+                quantity &&
+                operation === 'receipt' && (
+                  <div className="operation-message">
+                    Stock after receipt:{' '}
+                    {selectedLocationStock + Number(quantity)} units
                   </div>
                 )}
             </>
@@ -1599,54 +1533,56 @@ function Operations({
 
               <select
                 value={fromLocation}
-                onChange={(e) =>
-                  setFromLocation(
-                    e.target.value
-                  )
-                }
+                onChange={(e) => {
+                  setFromLocation(e.target.value)
+                  setMessage('')
+                }}
               >
-                <option value="">
-                  Select location
-                </option>
-
+                <option value="">Select location</option>
                 {LOCATIONS.map((item) => (
-                  <option key={item}>
-                    {item}
-                  </option>
+                  <option key={item}>{item}</option>
                 ))}
               </select>
 
-              {selectedProduct &&
-                fromLocation && (
-                  <div className="operation-message">
-                    Available at {fromLocation}:{' '}
-                    {selectedProduct.stockByLocation[
-                      fromLocation
-                    ] || 0}{' '}
-                    units
-                  </div>
-                )}
+              {selectedProduct && fromLocation && (
+                <div className="operation-message">
+                  Available at {fromLocation}: {transferSourceStock} units
+                </div>
+              )}
 
               <label>To Location</label>
 
               <select
                 value={toLocation}
-                onChange={(e) =>
-                  setToLocation(
-                    e.target.value
-                  )
-                }
+                onChange={(e) => {
+                  setToLocation(e.target.value)
+                  setMessage('')
+                }}
               >
-                <option value="">
-                  Select location
-                </option>
-
+                <option value="">Select location</option>
                 {LOCATIONS.map((item) => (
-                  <option key={item}>
-                    {item}
-                  </option>
+                  <option key={item}>{item}</option>
                 ))}
               </select>
+
+              {selectedProduct && toLocation && (
+                <div className="operation-message">
+                  Current stock at {toLocation}: {transferDestinationStock} units
+                </div>
+              )}
+
+              {selectedProduct &&
+                fromLocation &&
+                toLocation &&
+                quantity &&
+                fromLocation !== toLocation &&
+                Number(quantity) <= transferSourceStock && (
+                  <div className="operation-message">
+                    After transfer: {fromLocation}{' '}
+                    {transferSourceStock - Number(quantity)} units,{' '}
+                    {toLocation} {transferDestinationStock + Number(quantity)} units
+                  </div>
+                )}
             </>
           )}
 
@@ -1654,23 +1590,14 @@ function Operations({
             className="primary-btn operation-submit"
             onClick={handleOperation}
           >
-            {operation === 'receipt' &&
-              'Record Receipt'}
-
-            {operation === 'delivery' &&
-              'Record Delivery'}
-
-            {operation === 'transfer' &&
-              'Transfer Stock'}
-
-            {operation === 'adjustment' &&
-              'Adjust Stock'}
+            {operation === 'receipt' && 'Record Receipt'}
+            {operation === 'delivery' && 'Record Delivery'}
+            {operation === 'transfer' && 'Transfer Stock'}
+            {operation === 'adjustment' && 'Adjust Stock'}
           </button>
 
           {message && (
-            <div className="operation-message">
-              {message}
-            </div>
+            <div className="operation-message">{message}</div>
           )}
         </div>
       </div>
@@ -1679,6 +1606,14 @@ function Operations({
 }
 
 function History({ history }) {
+  const [filter, setFilter] = useState('All')
+
+  const filteredHistory = filter === 'All'
+    ? history
+    : history.filter((item) => item.type === filter)
+
+  const operationTypes = ['All', ...new Set(history.map((item) => item.type))]
+
   return (
     <main className="history-page">
       <div className="history-header">
@@ -1693,6 +1628,28 @@ function History({ history }) {
         </p>
       </div>
 
+      <div className="history-controls" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', marginBottom: '20px', flexWrap: 'wrap' }}>
+        <div>
+          <strong>{filteredHistory.length}</strong>{' '}
+          {filteredHistory.length === 1 ? 'movement' : 'movements'} shown
+        </div>
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span>Filter:</span>
+          <select
+            value={filter}
+            onChange={(event) => setFilter(event.target.value)}
+            style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid #d0d5dd', background: '#fff' }}
+          >
+            {operationTypes.map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
       <div className="history-table">
         <div className="history-row history-head">
           <span>Date</span>
@@ -1702,12 +1659,12 @@ function History({ history }) {
           <span>Details</span>
         </div>
 
-        {history.length === 0 ? (
+        {filteredHistory.length === 0 ? (
           <div className="no-history">
-            No stock movements yet.
+            No stock movements found for this filter.
           </div>
         ) : (
-          history.map((item) => (
+          filteredHistory.map((item) => (
             <div
               className="history-row"
               key={item.id}
